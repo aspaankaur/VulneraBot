@@ -2,5 +2,5 @@ fastapi
 uvicorn
 mangum
 requests
-openai
+groq
 python-dotenv

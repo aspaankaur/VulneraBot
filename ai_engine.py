@@ -1,18 +1,22 @@
 import os
-from openai import OpenAI
+from groq import Groq
 from prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 
-# Initialize OpenAI client (defaults to missing_key if environment variable isn't set)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "missing_key"))
-
 def get_ai_review(git_diff: str) -> str:
-    """Queries OpenAI to analyze a git diff with an 8s timeout and fallback."""
+    """Queries Groq (Llama 3.3 70B) to analyze a git diff with an 8s timeout and fallback."""
     if not git_diff.strip():
         return "✅ No code changes to analyze."
 
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return "⚠️ *AI logic review skipped (GROQ_API_KEY missing). Static security checks applied.*"
+
     try:
+        # Initialize Groq client
+        client = Groq(api_key=api_key)
+
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": USER_PROMPT_TEMPLATE.format(git_diff=git_diff)}
@@ -24,7 +28,7 @@ def get_ai_review(git_diff: str) -> str:
         return response.choices[0].message.content.strip()
     
     except Exception:
-        # Fallback if API times out, fails, or key is missing/invalid
+        # Fallback if API times out, fails, or key is invalid
         return "⚠️ *AI logic review skipped (API timeout or limit reached). Static security checks applied.*"
 
 
